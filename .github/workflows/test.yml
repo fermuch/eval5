@@ -15,7 +15,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-2016]
     steps:
       - uses: actions/checkout@v3
-      - uses: pnpm/action-setup
+      - uses: pnpm/action-setup@latest
         with:
           version: 6.32.4
       - name: Use Node.js ${{ matrix.node_version }}
