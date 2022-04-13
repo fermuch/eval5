@@ -705,6 +705,29 @@ export class Interpreter {
 			case "DebuggerStatement":
 				closure = this.debuggerStatementHandler(node);
 				break;
+			// case "ExportAllDeclaration": // TODO!
+			// case "ExportDefaultDeclaration": // TODO!
+			// case "ExportSpecifier": // TODO!
+			// case "ExportNamedDeclaration": // TODO!
+			// case "ImportNamespaceSpecifier": // TODO!
+			// case "ImportDefaultSpecifier": // TODO!
+			// case "ImportSpecifier": // TODO!
+			// case "ImportDeclaration": // TODO!
+			// case "MetaProperty": // TODO!
+			// case "ClassExpression": // TODO!
+			// case "ClassDeclaration": // TODO!
+			// case "MethodDefinition": // TODO!
+			// case "ClassBody": // TODO!
+			// case "AssignmentPattern": // TODO!
+			// case "RestElement": // TODO!
+			// case "ArrayPattern": // TODO!
+			// case "ObjectPattern": // TODO!
+			// case "init": // TODO!
+			// case "TaggedTemplateExpression": // TODO!
+			// case "YieldExpression": // TODO!
+			// case "SpreadElement": // TODO!
+			// case "Super": // TODO!
+			// case "ForOfStatement": // TODO!
 			default:
 				this.shouldNeverHappenError(Messages.NodeTypeSyntaxError, node.type, node);
 		}
