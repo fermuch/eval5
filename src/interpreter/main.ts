@@ -545,6 +545,14 @@ export class Interpreter {
 		return this.createError(message, error);
 	}
 
+	protected shouldNeverHappenError<T extends MessageItem>(
+		msg: T,
+		value: string | number,
+		node?: Node | null
+	): never {
+		throw this.createError(this.createErrorMessage(msg, value, node), msg[2]);
+	}
+
 	protected createInternalThrowError<T extends MessageItem>(
 		msg: T,
 		value: string | number,
@@ -698,7 +706,7 @@ export class Interpreter {
 				closure = this.debuggerStatementHandler(node);
 				break;
 			default:
-				throw this.createInternalThrowError(Messages.NodeTypeSyntaxError, node.type, node);
+				this.shouldNeverHappenError(Messages.NodeTypeSyntaxError, node.type, node);
 		}
 
 		return (...args: any[]) => {
@@ -769,7 +777,7 @@ export class Interpreter {
 				case "instanceof":
 					return leftValue instanceof rightValue;
 				default:
-					throw this.createInternalThrowError(
+					this.shouldNeverHappenError(
 						Messages.BinaryOperatorSyntaxError,
 						node.operator,
 						node
@@ -790,7 +798,7 @@ export class Interpreter {
 				case "&&":
 					return leftExpression() && rightExpression();
 				default:
-					throw this.createInternalThrowError(
+					this.shouldNeverHappenError(
 						Messages.LogicalOperatorSyntaxError,
 						node.operator,
 						node
@@ -857,7 +865,7 @@ export class Interpreter {
 						case "typeof":
 							return typeof value;
 						default:
-							throw this.createInternalThrowError(
+							this.shouldNeverHappenError(
 								Messages.UnaryOperatorSyntaxError,
 								node.operator,
 								node
@@ -883,7 +891,7 @@ export class Interpreter {
 				case "--":
 					return node.prefix ? --obj[name] : obj[name]--;
 				default:
-					throw this.createInternalThrowError(
+					this.shouldNeverHappenError(
 						Messages.UpdateOperatorSyntaxError,
 						node.operator,
 						node
@@ -1556,7 +1564,7 @@ export class Interpreter {
 				case "|=":
 					return (data[name] |= rightValue);
 				default:
-					throw this.createInternalThrowError(
+					this.shouldNeverHappenError(
 						Messages.AssignmentExpressionSyntaxError,
 						node.type,
 						node
@@ -2145,7 +2153,7 @@ export class Interpreter {
 			case "MemberExpression":
 				return this.createClosure(node.object);
 			default:
-				throw this.createInternalThrowError(Messages.AssignmentTypeSyntaxError, node.type, node);
+				this.shouldNeverHappenError(Messages.AssignmentTypeSyntaxError, node.type, node);
 		}
 	}
 
@@ -2157,7 +2165,7 @@ export class Interpreter {
 			case "MemberExpression":
 				return this.createMemberKeyGetter(node);
 			default:
-				throw this.createInternalThrowError(Messages.AssignmentTypeSyntaxError, node.type, node);
+				this.shouldNeverHappenError(Messages.AssignmentTypeSyntaxError, node.type, node);
 		}
 	}
 
