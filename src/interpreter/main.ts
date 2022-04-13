@@ -22,7 +22,7 @@ type CaseItem = {
 };
 type SwitchCaseClosure = () => CaseItem;
 type ReturnStringClosure = () => string;
-type ECMA_VERSION = 3 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 2015 | 2016 | 2017 | 2018 | 2019 | 2020;
+type ECMA_VERSION = 3 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 2015 | 2016 | 2017 | 2018 | 2019 | 2020 | 2021;
 interface Options {
 	ecmaVersion?: ECMA_VERSION;
 	timeout?: number;
@@ -49,6 +49,11 @@ function defineFunctionName<T>(func: T, name: string) {
 		enumerable: false,
 		configurable: true,
 	});
+}
+
+// helper to check if object is a Promise
+function isPromise(obj: any): obj is Promise<any> {
+	return !!obj && typeof obj.then === "function";
 }
 
 const hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -607,8 +612,17 @@ export class Interpreter {
 			case "SequenceExpression":
 				closure = this.sequenceExpressionHandler(node);
 				break;
+			case "AwaitExpression":
+				closure = this.awaitExpressionHandler(node);
+				break;
 			case "Literal":
 				closure = this.literalHandler(node);
+				break;
+			case "TemplateLiteral":
+				closure = this.templateLiteralHandler(node);
+				break;
+			case "TemplateElement":
+				closure = this.templateElementHandler(node);
 				break;
 			case "Identifier":
 				closure = this.identifierHandler(node);
@@ -637,6 +651,9 @@ export class Interpreter {
 				break;
 			case "FunctionExpression":
 				closure = this.functionExpressionHandler(node);
+				break;
+			case "ArrowFunctionExpression":
+				closure = this.arrowFunctionExpressionHandler(node);
 				break;
 			case "IfStatement":
 				closure = this.ifStatementHandler(node);
@@ -1240,6 +1257,107 @@ export class Interpreter {
 		};
 	}
 
+	// var f = () => {...}
+	protected arrowFunctionExpressionHandler(
+		node:
+			| (ESTree.ArrowFunctionExpression & { start?: number; end?: number })
+			| (ESTree.FunctionDeclaration & { start?: number; end?: number })
+	): BaseClosure {
+		const self = this;
+		const source = this.source;
+		const oldDeclVars = this.collectDeclVars;
+		const oldDeclFuncs = this.collectDeclFuncs;
+		this.collectDeclVars = Object.create(null);
+		this.collectDeclFuncs = Object.create(null);
+		const name = ""; /**anonymous*/
+		const paramLength = node.params.length;
+
+		const paramsGetter = node.params.map(param => this.createParamNameGetter(param));
+		// set scope
+		const bodyClosure = this.createClosure(node.body);
+
+		const declVars = this.collectDeclVars;
+		const declFuncs = this.collectDeclFuncs;
+
+		this.collectDeclVars = oldDeclVars;
+		this.collectDeclFuncs = oldDeclFuncs;
+
+		return () => {
+			// bind current scope
+			const runtimeScope = self.getCurrentScope();
+
+			const func = function (...args: any[]) {
+				self.callStack.push(`${name}`);
+
+				const prevScope = self.getCurrentScope();
+				const currentScope = createScope(runtimeScope, `FunctionScope(${name})`);
+				self.setCurrentScope(currentScope);
+
+				self.addDeclarationsToScope(declVars, declFuncs, currentScope);
+
+				// var t = function(){ typeof t } // function
+				// t = function(){ typeof t } // function
+				// z = function tx(){ typeof tx } // function
+				// but
+				// d = { say: function(){ typeof say } } // undefined
+				if (name) {
+					currentScope.data[name] = func;
+				}
+
+				// init arguments var
+				currentScope.data["arguments"] = arguments;
+				paramsGetter.forEach((getter, i) => {
+					currentScope.data[getter()] = args[i];
+				});
+
+				// init this				
+				// const prevContext = self.getCurrentContext();
+				//for ThisExpression
+				// self.setCurrentContext(this);
+
+				const result = bodyClosure();
+
+				//reset
+				// self.setCurrentContext(prevContext);
+				self.setCurrentScope(prevScope);
+
+				self.callStack.pop();
+
+				if (result instanceof Return) {
+					return result.value;
+				}
+			};
+
+			defineFunctionName(func, name);
+
+			Object.defineProperty(func, "length", {
+				value: paramLength,
+				writable: false,
+				enumerable: false,
+				configurable: true,
+			});
+
+			Object.defineProperty(func, "toString", {
+				value: () => {
+					return source.slice(node.start, node.end);
+				},
+				writable: true,
+				configurable: true,
+				enumerable: false,
+			});
+			Object.defineProperty(func, "valueOf", {
+				value: () => {
+					return source.slice(node.start, node.end);
+				},
+				writable: true,
+				configurable: true,
+				enumerable: false,
+			});
+
+			return func;
+		};
+	}
+
 	// new Ctrl()
 	protected newExpressionHandler(node: ESTree.NewExpression): BaseClosure {
 		const source = this.source;
@@ -1265,6 +1383,22 @@ export class Interpreter {
 			}
 
 			return new construct(...args.map(arg => arg()));
+		};
+	}
+
+	// await new Promise(...)
+	protected awaitExpressionHandler(node: ESTree.AwaitExpression): BaseClosure {
+		const expression = this.createClosure(node.argument);
+
+		const value = expression();
+		if (!isPromise(value)) {
+			throw this.createInternalThrowError(Messages.IsNotPromise, value, node);
+		}
+
+		return () => {
+			return value.then(v => {
+				return v;
+			});
 		};
 	}
 
@@ -1313,6 +1447,35 @@ export class Interpreter {
 
 			return node.value;
 		};
+	}
+
+	// `foo ${bar}`
+	protected templateLiteralHandler(node: ESTree.TemplateLiteral): BaseClosure {
+		const expressions = node.expressions.map(item => this.createClosure(item));
+		const quasis = node.quasis.map(item => this.createClosure(item));
+
+		return () => {
+			let result = "";
+			const len = quasis.length;
+
+			for (let i = 0; i < len; i++) {
+				const quasi = quasis[i];
+				const expression = expressions[i];
+				// last quasi does not have an expression
+				if (i < len - 1) {
+					result += quasi() + expression();
+				} else {
+					result += quasi();
+				}
+			}
+
+			return result;
+		}
+	}
+
+	// "foo "
+	protected templateElementHandler(node: ESTree.TemplateElement): BaseClosure {
+		return () => node.value.raw;
 	}
 
 	// var1 ...

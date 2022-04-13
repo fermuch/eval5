@@ -72,3 +72,109 @@ test("es5 -2", () => {
 
 	expect(hasError).toEqual(true);
 });
+
+test("es2021", () => {
+	let hasError = false;
+	const interpreter = new Interpreter(
+		{},
+		{
+			ecmaVersion: 2021,
+			globalContextInFunction: {
+				setTimeout: setTimeout,
+			},
+		}
+	);
+
+
+	try {
+		interpreter.evaluate(
+			`
+        const i = 1_000_000_000;
+  		`
+		);
+	} catch (e) {
+		hasError = true;
+	}
+
+	expect(hasError).toEqual(false);
+
+
+	let ret: any = null;
+	try {
+		ret = interpreter.evaluate(
+			`
+				'xxx'.replaceAll('x', '_');
+  		`
+		);
+	} catch (e) {
+		hasError = true;
+	}
+
+	expect(ret).toBe('___');
+	expect(hasError).toEqual(false);
+
+
+	ret = null;
+	try {
+		ret = interpreter.evaluate(
+			`
+				async function f() {
+					// await new Promise(resolve => {setTimeout(resolve, 0)});
+					await new Promise(res => res());
+					return 42;
+				}
+				f();
+  		`
+		);
+	} catch (e) {
+		console.error(e);
+		hasError = true;
+	}
+
+	expect(hasError).toEqual(false);
+	expect(ret).toBe(42);
+
+	ret = null;
+	try {
+		ret = interpreter.evaluate(
+			`
+			const car = {
+				model: 'Fiesta',
+				manufacturer: 'Ford',
+				fullName: function() {
+					return \`\${this.manufacturer} \${this.model}\`
+				}
+			};
+			car.fullName();
+			`
+		);
+	} catch (e) {
+		console.error(e);
+		hasError = true;
+	}
+
+	expect(hasError).toEqual(false);
+	expect(ret).toBe('Ford Fiesta');
+
+	ret = null;
+	try {
+		ret = interpreter.evaluate(
+			`
+			const car = {
+				model: 'Fiesta',
+				manufacturer: 'Ford',
+				fullName: () => {
+					return \`\${this.manufacturer} \${this.model}\`
+				}
+			};
+			car.fullName();
+			`
+		);
+	} catch (e) {
+		console.error(e);
+		hasError = true;
+	}
+
+	expect(hasError).toEqual(false);
+	expect(ret).toBe('undefined undefined');
+});

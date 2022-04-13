@@ -8,7 +8,7 @@ specifiers:
   '@types/estree': 0.0.41
   '@types/fs-extra': ^9.0.13
   '@types/jest': ^27.4.1
-  acorn: ^7.1.0
+  acorn: ^8.7.0
   babel-plugin-search-and-replace: ^1.0.1
   babel-preset-packez: ^1.0.0
   core^7: link:@babel/core^7
@@ -23,7 +23,7 @@ dependencies:
   '@babel/runtime': 7.17.9
   '@types/acorn': 4.0.6
   '@types/estree': 0.0.41
-  acorn: 7.4.1
+  acorn: 8.7.0
 
 devDependencies:
   '@babel/cli': 7.17.6
@@ -2176,12 +2176,12 @@ packages:
     resolution: {integrity: sha512-nQyp0o1/mNdbTO1PO6kHkwSrmgZ0MT/jCCpNiwbUjGoRN4dlBhqJtoQuCnEOKzgTVwg0ZWiCoQy6SxMebQVh8A==}
     engines: {node: '>=0.4.0'}
     hasBin: true
+    dev: true
 
   /acorn/8.7.0:
     resolution: {integrity: sha512-V/LGr1APy+PXIwKebEWrkZPwoeoF+w1jiOBUmuxuiUIaOHtob8Qc9BTrYo7VuI5fR8tqsy+buA2WFooR5olqvQ==}
     engines: {node: '>=0.4.0'}
     hasBin: true
-    dev: true
 
   /adjust-sourcemap-loader/3.0.0:
     resolution: {integrity: sha512-YBrGyT2/uVQ/c6Rr+t6ZJXniY03YtHGMJQYal368burRGYKqhx9qGTWqcBU5s1CwYY9E/ri63RYyG1IacMZtqw==}
